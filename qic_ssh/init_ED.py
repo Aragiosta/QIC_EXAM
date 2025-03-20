@@ -26,7 +26,9 @@ class XYSystem:
 
     def eig(self, k=None, eigvecs=True):
         if k is None:
-            k = self.H.shape[0] - 2
+            # k = self.H.shape[0] - 2
+            # k = 10
+            k = int(2 * np.log2(self.H.shape[0]) + 1)
         if eigvecs:
             self.eigvals, self.eigvecs = sparse.linalg.eigsh(self.H, k)
         else:
