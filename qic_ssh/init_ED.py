@@ -1,28 +1,46 @@
-import scipy.sparse as sparse
+from scipy import sparse
 import numpy as np
 
 class XYSystem:
     sigma_x = sparse.coo_array([[0, 1], [1, 0]], dtype=complex)
     sigma_y = sparse.coo_array([[0, -1j], [1j, 0]], dtype=complex)
     sigma_z = sparse.coo_array([[1, 0], [0, -1]], dtype=complex)
-    sigma_p = sigma_x + 1j * sigma_y
-    sigma_m = sigma_x - 1j * sigma_y
+    sigma_p = 0.5 * (sigma_x + 1j * sigma_y)
+    sigma_m = 0.5 * (sigma_x - 1j * sigma_y)
 
-    def __init__(self, N_sites, int_mat):
+    def __init__(self, int_mat):
+        N_sites = int_mat.shape[0]
+
+        self.eigvals = None
+        self.eigvecs = None
+
         self.H = sparse.coo_array((2**N_sites, 2**N_sites), dtype=complex)
-        for (i, j), J in np.ndenumerate(int_mat):
-            if i >= j:
-                continue
+        for (ii, jj), J in np.ndenumerate(int_mat):
+            if J == 0: continue
+            if jj == ii: continue
 
+            first_site = np.min([ii, jj])
+            dist = np.abs(ii-jj)
+            last_site = np.max([ii, jj])
+
+            # first part
             self.H += J * sparse.kron(
                 sparse.kron(
                     sparse.kron(
-                        sparse.kron(sparse.eye(2**i), self.sigma_p),
-                        sparse.eye(2**(j - i - 1))),
+                        sparse.kron(sparse.eye(2**first_site), self.sigma_p),
+                        sparse.eye(2**(dist - 1))),
                     self.sigma_m),
-                sparse.eye(2**(N_sites - 1 - j)))
+                sparse.eye(2**(N_sites - 1 - last_site)))
 
-        self.H = 0.5 * (self.H + self.H.T.conj())
+            # adjoint part
+            self.H += J * sparse.kron(
+                sparse.kron(
+                    sparse.kron(
+                        sparse.kron(sparse.eye(2**first_site), self.sigma_m),
+                        sparse.eye(2**(dist - 1))),
+                    self.sigma_p),
+                sparse.eye(2**(N_sites - 1 - last_site)))
+        self.H = - 0.5 * (self.H + self.H.T.conj())
 
     def eig(self, k=None, eigvecs=True):
         if k is None:
