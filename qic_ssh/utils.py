@@ -92,32 +92,64 @@ def half_chain_entropy(par, psi):
     # Then Von Neumann's entropy
     return  - np.sum(eigvals * np.log2(eigvals))
 
-def order_eigvals(par, eigvals, eigvecs):
-    # Returns a list of lists. Each list is the collection
-    # of eigenstates with a specific "number of fermions"
-    # It basically builds graphs in figures 3A and 3B.
-    energy_per_number = [list() for qbits in range(par.n_qbits)]
-    # n_op = sum([
-    #     sparse.kron(
-    #         sparse.kron(sparse.eye(2**ii), sparse.dia_array(([1, 0], 0), shape=(2, 2))),
-    #         sparse.eye(2**(par.n_qbits - ii - 1))
-    #     ) for ii in range(par.n_qbits)])
-    occupation_list = np.array([sum(map(int,"{0:b}".format(number)))
-        for number in range(2**par.n_qbits)])
-
+def entanglement_spectrum(par, eigvecs):
+    # Compute the half chain entanglement entropy for all calculated eigenstates
+    ent_spectrum = np.zeros(len=eigvecs.shape[1])
     for ii in range(eigvecs.shape[1]):
-        # The idea is that once we have the COMPLETE eigenspace of the energy operator
-        # associated to the energy E we can just - NOPE, does not work
+        ent_spectrum[ii] = half_chain_entropy(par, eigvecs[:, ii])
+    
+    return ent_spectrum
 
-        # Surely there is a way without using the whole eigenspectrum, for now
-        # forget about this and just work with the ground state
-        if (np.abs(n_fermions - np.round(n_fermions))  >= 1e-10).all():
-            print("Error: noninteger number of fermions")
-        else: n_fermions = np.round(n_fermions)
+def order_eigvals(par, eigvals, eigvecs):
+    # Function that given a COMPLETE eigenspace of the hamiltonian returns
+    # the associated number of particles. This implies diagonalizing the subspace
+    # and thus scales quite badly.
+    # eigspace[:, i] should be the i-th eigvector of the starting basis
+    # It basically builds graphs in figures 3A and 3B.
 
-        energy_per_number[n_fermions].append(eigvals[ii])
+    # Careful that in order for this to work we need the COMPLETE energy eigenstate,
+    # as having a partial eigenstate means that we cannot distinguish actual degenerate
+    # n_op eigenvalues from superposition of eigenvalues.
 
-    return energy_per_number
+    # Initiate empty list of lists to store the particle numbers-energy lists
+    fermions_to_energy = [list() for ii in range(par.n_qbits + 1)]
+    # Create first the diagonal of the number operator in the computational basis
+    occupation_list = np.array([sum(map(int,"{0:b}".format(number)))
+        for number in range(par.lin_size)])
+    # Then create N_op
+    N_op = sparse.dia_array((occupation_list, 0), shape=(par.lin_size, par.lin_size))
+
+    # And find the energy subspaces:
+    # creates an array of indices, sorted by unique element
+    idx_sort = np.argsort(eigvals)
+
+    # sorts eigvals array so all unique elements are together 
+    eigvals = eigvals[idx_sort]
+
+    # returns unique values, index of first occurrence of value, and count for each element
+    vals, idx_start, counts = np.unique(
+        eigvals.round(decimals=8),
+        return_counts=True,
+        return_index=True
+    )
+
+    # And for all COMPLETE subspaces project and diagonalize
+    for (val, idx, count) in zip(vals, idx_start, counts):
+        eigspace = eigvecs[:, idx_sort[idx:idx+count]]
+        n_fermions = np.linalg.eigvalsh(eigspace.T.conj() @ N_op @ eigspace)
+
+        if (np.abs(np.round(n_fermions) - n_fermions) >= 1e-8).any():
+            print("#########################################################################")
+            print("Relevantly noninteger number of fermions with max value:")
+            print(f"{max(np.round(n_fermions) - n_fermions)}")
+            print("#########################################################################")
+        
+        n_fermions = np.round(n_fermions).astype(int)
+
+        for num in n_fermions:
+            fermions_to_energy[num].append(val)
+    
+    return fermions_to_energy
 
 def zz_correlation(par, psi, keep_indices):
     # To find the 2-point zz correlation expectation value of sites i, j
