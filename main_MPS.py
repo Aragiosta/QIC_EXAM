@@ -2,7 +2,7 @@ import numpy as np
 import scipy as sp
 from scipy import sparse
 import matplotlib.pyplot as plt
-from qic_ssh import init_ED as ED
+from qic_ssh import init_MPS as MPS
 from qic_ssh import setup
 from qic_ssh import utils
 # For external bash handling of the sim parameters
@@ -36,33 +36,43 @@ elif args.model == "paper":
 else:
     J = np.empty((par.n_qbits, par.n_qbits))
 
-paper = ED.XYSystem(J)
-paper.eig(k=par.lin_size)
+paper = MPS.XYSystem(J)
 
+# Do a DMRG to find GS
+psi = MPS.from_product_state(model.lat.mps_sites(), p_state, bc=model.lat.bc_MPS)
+algorithm_params = {
+    'trunc_params': {
+        'chi_max': 30,
+        'svd_min': 1.e-7,
+    },
+    'max_sweeps': 40,
+}
+eng = dmrg.TwoSiteDMRGEngine(psi, model, algorithm_params)
+E, psi = eng.run()
 # energy_list = order_eigvals(par, paper.eigvals, paper.eigvecs)
-energy_list = utils.find_num_fermions(par, paper.eigvecs[:, paper.eigvals == max(paper.eigvals)])
+# energy_list = utils.find_num_fermions(par, paper.eigvecs[:, paper.eigvals == max(paper.eigvals)])
 
 # Compute entanglement of GS
-ent_entropy = utils.bipartite_entropy(par, paper.eigvecs[:, 0])
+# ent_entropy = utils.bipartite_entropy(par, paper.eigvecs[:, 0])
 
 # Compute order parameters
-z_parameter = utils.z_string(par, paper.eigvecs[:, 0])
-x_parameter = utils.x_string(par, paper.eigvecs[:, 0])
+# z_parameter = utils.z_string(par, paper.eigvecs[:, 0])
+# x_parameter = utils.x_string(par, paper.eigvecs[:, 0])
 
 # Compute correlation matrices
-zz_corr = np.array([
-    utils.zz_correlation(par, paper.eigvecs[:, 0], [ii, jj])
-    for (ii, jj), J in np.ndenumerate(J)
-]).reshape(par.n_qbits, par.n_qbits)
+# zz_corr = np.array([
+#     utils.zz_correlation(par, paper.eigvecs[:, 0], [ii, jj])
+#     for (ii, jj), J in np.ndenumerate(J)
+# ]).reshape(par.n_qbits, par.n_qbits)
 
-xx_corr = np.array([
-    utils.xx_correlation(par, paper.eigvecs[:, 0], [ii, jj])
-    for (ii, jj), J in np.ndenumerate(J)
-]).reshape(par.n_qbits, par.n_qbits)
+# xx_corr = np.array([
+#     utils.xx_correlation(par, paper.eigvecs[:, 0], [ii, jj])
+#     for (ii, jj), J in np.ndenumerate(J)
+# ]).reshape(par.n_qbits, par.n_qbits)
 
-e_N = utils.order_eigvals(par, paper.eigvals, paper.eigvecs)
-plt.eventplot(e_N, orientation='vertical')
-plt.show()
+# e_N = utils.order_eigvals(par, paper.eigvals, paper.eigvecs)
+# plt.eventplot(e_N, orientation='vertical')
+# plt.show()
 # Data production
 
 # np.savetxt(
