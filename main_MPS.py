@@ -1,4 +1,5 @@
 import numpy as np
+import os
 import scipy as sp
 from scipy import sparse
 import matplotlib.pyplot as plt
@@ -7,6 +8,7 @@ from qic_ssh import setup
 from qic_ssh import utils
 # For external bash handling of the sim parameters
 import argparse
+from tenpy.networks.site import SpinHalfSite
 
 # Define the parser
 parser = argparse.ArgumentParser(description='QIAC exam')
@@ -25,7 +27,7 @@ args = parser.parse_args()
 # For when debbuging is on Friday
 args.model = "ideal"
 args.topological = True
-args.n_sites = 8
+args.n_sites = 4
 
 par = setup.Param(args.n_sites)
 # Now try to use it and reproduce the paper
@@ -36,19 +38,42 @@ elif args.model == "paper":
 else:
     J = np.empty((par.n_qbits, par.n_qbits))
 
-paper = MPS.XYSystem(J)
-
-# Do a DMRG to find GS
-psi = MPS.from_product_state(model.lat.mps_sites(), p_state, bc=model.lat.bc_MPS)
-algorithm_params = {
-    'trunc_params': {
-        'chi_max': 30,
-        'svd_min': 1.e-7,
-    },
-    'max_sweeps': 40,
+model_params = {
+    'bc_MPS': 'finite',
+    'L': par.n_qbits,
+    'lattice': 'Chain',
+    'bc_x': 'open',
+    'order': 'default',
+    'conserve': 'None'
 }
-eng = dmrg.TwoSiteDMRGEngine(psi, model, algorithm_params)
-E, psi = eng.run()
+
+# chain = tenpy.models.lattice.Chain(par.n_qbits, SpinHalfSite(conserve='None'), bc='open', bc_MPS='finite')
+
+# model_params['lattice'] = chain
+
+paper = MPS.XYSystem(model_params=model_params, J=J)
+# paper.init_sites(model_params=model_params)
+# paper.init_terms(model_params=model_params)
+
+# We must first find the starting WF for the DMRG algorithm
+file_path = r"DATA_SERVER/data_4_topo_ideal/Eigvecs4_ideal_topoTrue.data"
+if os.path.exists(file_path):
+    eigstates = np.loadtxt(file_path, dtype=complex, delimiter=',')
+    p_state = eigstates[:, 0:2]
+else:
+    p_state = None
+
+alg_params = {
+            'trunc_params': {
+                'chi_max': 30,
+                'svd_min': 1.e-7,
+            },
+            'max_sweeps': 40,
+}
+paper.do_DMRG(alg_params, p_state)
+
+print(paper.gs_energy, paper.gs_psi)
+
 # energy_list = order_eigvals(par, paper.eigvals, paper.eigvecs)
 # energy_list = utils.find_num_fermions(par, paper.eigvecs[:, paper.eigvals == max(paper.eigvals)])
 
