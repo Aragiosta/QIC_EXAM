@@ -27,7 +27,7 @@ args = parser.parse_args()
 # For when debbuging is on Friday
 args.model = "ideal"
 args.topological = True
-args.n_sites = 4
+args.n_sites = 8
 
 par = setup.Param(args.n_sites)
 # Now try to use it and reproduce the paper
@@ -56,19 +56,21 @@ paper = MPS.XYSystem(model_params=model_params, J=J)
 # paper.init_terms(model_params=model_params)
 
 # We must first find the starting WF for the DMRG algorithm
-file_path = r"DATA_SERVER/data_4_topo_ideal/Eigvecs4_ideal_topoTrue.data"
-if os.path.exists(file_path):
-    eigstates = np.loadtxt(file_path, dtype=complex, delimiter=',')
-    p_state = eigstates[:, 0:2]
-else:
-    p_state = None
-
+# file_path = r"DATA_SERVER/data_8_topo_ideal/Eigvecs8_ideal_topoTrue.data"
+# if os.path.exists(file_path):
+#     eigstates = np.loadtxt(file_path, dtype=complex, delimiter=',')
+#     p_state = eigstates[:, 0:5]
+# else:
+#     p_state = None
+# ALTERNATIVELY: find eigvecs starting from generic random wf
+p_state = np.random.rand(par.lin_size, 4)
 alg_params = {
             'trunc_params': {
                 'chi_max': 30,
                 'svd_min': 1.e-7,
             },
             'max_sweeps': 40,
+            'min_sweeps': 10
 }
 paper.do_DMRG(alg_params, p_state)
 

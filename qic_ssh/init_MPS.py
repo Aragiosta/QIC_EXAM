@@ -54,20 +54,22 @@ class XYSystem(CouplingMPOModel):
         psi = []
         # To extend the first k eigenstates, do DMRG k times
         # and each time add the found eigstate to the orthogonal_to parameters
-        alg_params['orthogonal_to'] = []
+        ortho_space = []
         for ii in range(k):
             wavefunction = p_state[:, ii]
             array_from_wf = Array.from_ndarray_trivial(wavefunction.reshape(train_shape), labels=leg_labels)
             psi.append(MPS.from_full(self.lat.mps_sites(), array_from_wf, bc=self.lat.bc_MPS))
             #Then initialize engine
-            eng = dmrg.TwoSiteDMRGEngine(psi[ii], self, alg_params)
+            eng = dmrg.SingleSiteDMRGEngine(psi[ii], self, alg_params, orthogonal_to=ortho_space)
             # and run
             results = eng.run()
+            
             self.eigvals.append(results[0])
             self.eigvecs.append(results[1])
             # then remove the eigenvector that we found
-            alg_params['orthogonal_to'].append(psi[ii])
+            ortho_space.append(psi[ii])
         
         # finally convert the results into numpy arrays
         self.eigvals = np.array(self.eigvals)
         self.eigvecs = np.array(self.eigvecs)
+
