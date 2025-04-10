@@ -17,13 +17,17 @@ parser = argparse.ArgumentParser(description='QIAC exam')
 # corresponding value should be stored in the `algo` 
 # field, and using a default value if the argument 
 # isn't given
-parser.add_argument('--topological', action="store", dest='topological', default=True)
+parser.add_argument('--topological', action="store", dest='topological', default='True')
 parser.add_argument('--n_sites', action="store", dest='n_sites', default=0, type=int)
 parser.add_argument('--model', action="store", dest='model', default="ideal")
 
 # Now, parse the command line arguments and store the 
 # values in the `args` variable
 args = parser.parse_args()
+if args.topological == 'True':
+    args.topological = True
+else:
+    args.topological = False
 # For when debbuging is on Friday
 args.model = "ideal"
 args.topological = True
@@ -100,59 +104,62 @@ print(paper.gs_energy, paper.gs_psi)
 # e_N = utils.order_eigvals(par, paper.eigvals, paper.eigvecs)
 # plt.eventplot(e_N, orientation='vertical')
 # plt.show()
-# Data production
 
-# np.savetxt(
-#     f"Ham{par.n_qbits}_{args.model}_topo{args.topological}.data",
-#     paper.H.toarray(),
-#     fmt="%10.8f",
-#     delimiter=", ",
-#     header=f"Hamiltonian of {par.n_qbits} sites obeying the {args.model} model")
+# # Data production
+# parameters = '''N_qbits: %s \n Int_matrix: %s''' % (par.n_qbits, J)
+
+# # # Better not - leads to huge files
+# # # np.savetxt(
+# # #     f"Ham{par.n_qbits}_{args.model}_topo{args.topological}.data",
+# # #     paper.H.toarray(),
+# # #     fmt="%10.8f",
+# # #     delimiter=", ",
+# # #     header=f"Hamiltonian of {par.n_qbits} sites obeying the {args.model} model")
 
 # np.savetxt(
 #     f"Eigvals{par.n_qbits}_{args.model}_topo{args.topological}.data",
 #     paper.eigvals,
 #     fmt="%10.8f",
 #     delimiter=", ",
-#     header=f"Energies of {par.n_qbits} sites obeying the {args.model} model")
+#     header=f"parameters: {parameters}")
 
 # np.savetxt(
 #     f"Eigvecs{par.n_qbits}_{args.model}_topo{args.topological}.data",
 #     paper.eigvecs,
 #     fmt="%10.8f",
 #     delimiter=", ",
-#     header=f"Columns are eigstates of {par.n_qbits} sites of the {args.model} model")
+#     header=f"parameters: {parameters}. \n Columns are eigstates of the {args.model} model")
 
 # np.savetxt(
 #     f"EnergyToNumber{par.n_qbits}_{args.model}_topo{args.topological}.data",
 #     energy_list,
 #     delimiter=", ",
-#     header=f"Number of particles in the GS of {par.n_qbits} sites of the {args.model} model")
+#     header=f"parameters: {parameters}")
 
 # np.savetxt(
 #     f"EntEntropy{par.n_qbits}_{args.model}_topo{args.topological}.data",
 #     np.array([ent_entropy]),
 #     fmt="%10.8f",
 #     delimiter=", ",
-#     header=f"Bipartite entanglement entropy on the GS of {par.n_qbits} sites of the {args.model} model")
+#     header=f"parameters: {parameters} \n Bipartite entropy on the GS of the {args.model} model")
 
 # np.savetxt(
 #     f"StringParameters{par.n_qbits}_{args.model}_topo{args.topological}.data",
 #     [z_parameter, x_parameter],
 #     fmt="%10.8f",
 #     delimiter=", ",
-#     header=f"z and x string exp. values on the GS of {par.n_qbits} sites of the {args.model} model")
+#     header=f"parameters: {parameters} \n z and x string VEV of the {args.model} model")
 
 # np.savetxt(
 #     f"ZZCorrelators{par.n_qbits}_{args.model}_topo{args.topological}.data",
 #     zz_corr,
 #     fmt="%10.8f",
 #     delimiter=", ",
-#     header=f"zz 2-point correlator on the GS of {par.n_qbits} sites of the {args.model} model")
+#     header=f"zz correlator on the GS of the {args.model} model\n parameters: {parameters}")
 
 # np.savetxt(
 #     f"XXCorrelators{par.n_qbits}_{args.model}_topo{args.topological}.data",
 #     xx_corr,
 #     fmt="%10.8f",
 #     delimiter=", ",
-#     header=f"xx 2-point correlator on the GS of {par.n_qbits} sites of the {args.model} model")
+#     header=f"xx correlator on the GS of the {args.model} model\n parameters: {parameters}")

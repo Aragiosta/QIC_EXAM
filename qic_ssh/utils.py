@@ -94,7 +94,7 @@ def half_chain_entropy(par, psi):
 
 def entanglement_spectrum(par, eigvecs):
     # Compute the half chain entanglement entropy for all calculated eigenstates
-    ent_spectrum = np.zeros(len=eigvecs.shape[1])
+    ent_spectrum = np.zeros(eigvecs.shape[1])
     for ii in range(eigvecs.shape[1]):
         ent_spectrum[ii] = half_chain_entropy(par, eigvecs[:, ii])
     
@@ -221,7 +221,7 @@ def z_string(par, psi):
             operator = sparse.dia_array(([1.j, -1.j], [0]), shape=(2, 2))
         string_op = sparse.kron(string_op, operator)
     
-    return - psi.T.conj() @ string_op @ psi
+    return - psi.T.conj() @ string_op.dot(psi)
 
 def x_string(par, psi):
     string_op = 1.
@@ -235,4 +235,4 @@ def x_string(par, psi):
             operator = sparse.linalg.expm(np.pi * 0.5 * np.array([[0, 1.j],[1.j, 0]]))
         string_op = sparse.kron(string_op, operator)
     
-    return - psi.T.conj() @ string_op @ psi
+    return - psi.T.conj() @ string_op.dot(psi)
