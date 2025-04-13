@@ -1,12 +1,16 @@
+# For external bash handling of the sim parameters
+import argparse
+# For time diagnostics
+from timeit import default_timer as timer
+# All the mathsy stuff
 import numpy as np
 import scipy as sp
 from scipy import sparse
 import matplotlib.pyplot as plt
+# Specific modules for the simulation
 from qic_ssh import init_ED as ED
 from qic_ssh import setup
 from qic_ssh import utils
-# For external bash handling of the sim parameters
-import argparse
 
 # Define the parser
 parser = argparse.ArgumentParser(description='QIAC exam')
@@ -27,9 +31,15 @@ if args.topological == 'True':
 else:
     args.topological = False
 # For when debbuging is on Friday
-# args.model = "ideal"
-# args.topological = True
-# args.n_sites = 8
+args.model = "paper"
+args.topological = True
+args.n_sites = 8
+
+# List of computational time used by the main blocks of the execution
+times = {}
+
+# Time the setup of the system
+start = timer()
 
 par = setup.Param(args.n_sites)
 # Now try to use it and reproduce the paper
@@ -40,19 +50,42 @@ elif args.model == "paper":
 else:
     J = np.empty((par.n_qbits, par.n_qbits))
 
+J[np.abs(J) > 1e-10] = 0
 paper = ED.XYSystem(J)
+
+# Then compute time difference
+times['Init'] = timer() - start
+
+# Time the eigensolver of the MB hamiltonian
+start = timer()
 paper.eig(k=par.lin_size)
+# Then compute time difference
+times['Eig'] = timer() - start
 
-# energy_list = order_eigvals(par, paper.eigvals, paper.eigvecs)
-energy_list = utils.find_num_fermions(par, paper.eigvecs[:, paper.eigvals == max(paper.eigvals)])
+# Time the creation of the energy-n.part graph
+start = timer()
+# energy_list = utils.find_num_fermions(par, paper.eigvecs[:, paper.eigvals == max(paper.eigvals)])
+energy_list = utils.order_eigvals(par, paper.eigvals, paper.eigvecs)
+# Then compute time difference
+times['N_part'] = timer() - start
 
+# Time the entanglement spectrum of the GS
+start = timer()
 # Compute entanglement of GS
-ent_entropy = utils.bipartite_entropy(par, paper.eigvecs[:, 0])
+ent_entropy = utils.entanglement_spectrum(par, paper.eigvecs[:, 0])
+# Then compute time difference
+times['Eig'] = timer() - start
 
+# Time the computation of the order parameters
+start = timer()
 # Compute order parameters
 z_parameter = utils.z_string(par, paper.eigvecs[:, 0])
 x_parameter = utils.x_string(par, paper.eigvecs[:, 0])
+# Then compute time difference
+times['Strings'] = timer() - start
 
+# Time the entanglement spectrum of the GS
+start = timer()
 # Compute correlation matrices
 zz_corr = np.array([
     utils.zz_correlation(par, paper.eigvecs[:, 0], [ii, jj])
@@ -63,10 +96,13 @@ xx_corr = np.array([
     utils.xx_correlation(par, paper.eigvecs[:, 0], [ii, jj])
     for (ii, jj), J in np.ndenumerate(J)
 ]).reshape(par.n_qbits, par.n_qbits)
+# Then compute time difference
+times['2p_corr'] = timer() - start
 
-e_N = utils.order_eigvals(par, paper.eigvals, paper.eigvecs)
-plt.eventplot(e_N, orientation='vertical')
-plt.show()
+
+# e_N = utils.order_eigvals(par, paper.eigvals, paper.eigvecs)
+# plt.eventplot(e_N, orientation='vertical')
+# plt.show()
 
 # Data production
 parameters = '''N_qbits: %s \n Int_matrix: %s''' % (par.n_qbits, J)
@@ -94,10 +130,22 @@ np.savetxt(
     header=f"parameters: {parameters}. \n Columns are eigstates of the {args.model} model")
 
 np.savetxt(
-    f"EnergyToNumber{par.n_qbits}_{args.model}_topo{args.topological}.data",
-    energy_list,
+    f"GS{par.n_qbits}_{args.model}_topo{args.topological}.data",
+    paper.eigvecs[:, 0],
+    fmt="%10.8f",
     delimiter=", ",
-    header=f"parameters: {parameters}")
+    header=f"parameters: {parameters}. \n Columns are eigstates of the {args.model} model")
+
+import json
+
+with open(f"EnergyToNumber{par.n_qbits}_{args.model}_topo{args.topological}.data", 'w') as file:
+    file.write(json.dumps(energy_list, indent='\t')) # use `json.loads` to do the reverse
+
+# np.savetxt(
+#     f"EnergyToNumber{par.n_qbits}_{args.model}_topo{args.topological}.data",
+#     energy_list,
+#     delimiter=", ",
+#     header=f"parameters: {parameters}")
 
 np.savetxt(
     f"EntEntropy{par.n_qbits}_{args.model}_topo{args.topological}.data",
@@ -126,3 +174,6 @@ np.savetxt(
     fmt="%10.8f",
     delimiter=", ",
     header=f"xx correlator on the GS of the {args.model} model\n parameters: {parameters}")
+
+with open(f"Times{par.n_qbits}_{args.model}_topo{args.topological}.data", 'w') as file:
+    file.write(json.dumps(times, indent='\t')) # use `json.loads` to do the reverse

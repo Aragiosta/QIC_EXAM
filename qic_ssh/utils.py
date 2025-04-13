@@ -79,8 +79,8 @@ def bipartite_entropy(par, psi):
     eigvals = np.linalg.eigvalsh(rho_A)
     # Purge the smallest eigenvalues
     eigvals = eigvals[eigvals >= 1e-8]
-    # Then Von Neumann's entropy
-    return  - np.sum(eigvals * np.log2(eigvals))
+    # Then Entanglement spectrum
+    return  eigvals
 
 def half_chain_entropy(par, psi):
     # Entanglement entropy of the state psi from an half-chain division
@@ -88,16 +88,20 @@ def half_chain_entropy(par, psi):
     rho_A = get_reduced_density_matrix(psi, 2, par.n_qbits, [ii for ii in range(par.n_qbits // 2)])
     eigvals = np.linalg.eigvalsh(rho_A)
     # Purge the smallest eigenvalues
-    eigvals = eigvals[eigvals >= 1e-8]
-    # Then Von Neumann's entropy
-    return  - np.sum(eigvals * np.log2(eigvals))
+    eigvals = eigvals[eigvals >= 1e-15]
+    # Then Entanglement spectrum
+    return  eigvals
 
 def entanglement_spectrum(par, eigvecs):
     # Compute the half chain entanglement entropy for all calculated eigenstates
-    ent_spectrum = np.zeros(eigvecs.shape[1])
-    for ii in range(eigvecs.shape[1]):
-        ent_spectrum[ii] = half_chain_entropy(par, eigvecs[:, ii])
-    
+    if len(eigvecs.shape) == 1:
+        # we only have one wf
+        ent_spectrum = half_chain_entropy(par, eigvecs)
+    else:
+        ent_spectrum = list()
+        for ii in range(eigvecs.shape[1]):
+            ent_spectrum.append(half_chain_entropy(par, eigvecs[:, ii]))
+
     return ent_spectrum
 
 def order_eigvals(par, eigvals, eigvecs):
@@ -236,3 +240,4 @@ def x_string(par, psi):
         string_op = sparse.kron(string_op, operator)
     
     return - psi.T.conj() @ string_op.dot(psi)
+

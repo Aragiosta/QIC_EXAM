@@ -32,15 +32,15 @@ def paper(par: Param, topological: bool=True):
     # We want chiral symmetry so we impose the magic angle
     # And equally spaced sites, the standard distance is normalized to 1
     pos_A = np.array(list(range(par.n_qbits_sub)))
-    pos_A = np.array([pos_A * np.cos(par.lattice_angle), pos_A * np.sin(par.lattice_angle)])
+    pos_A = np.array([pos_A * np.sin(par.lattice_angle), pos_A * np.cos(par.lattice_angle)])
 
     pos_B = pos_A.copy()
-    pos_B[0] += np.sin(par.lattice_angle + np.pi / 3.0)
-    pos_B[1] += np.cos(par.lattice_angle + np.pi / 3.0)
+    pos_B[0] += np.sin(par.lattice_angle + np.arctan(4. / 3.)) * 10. / 12.
+    pos_B[1] += np.cos(par.lattice_angle + np.arctan(4. / 3.)) * 10. / 12.
 
-    if topological:
+    if not topological:
+        pos_A[:, 0] = pos_A[:, -1] + pos_B[:, -1] - pos_B[:, -2]
         pos_A = np.roll(pos_A, -1, 1)
-        pos_A[:, -1] = pos_B[:, -1] + pos_A[:, -2] - pos_B[:, -2]
 
     J = np.empty((par.n_qbits, par.n_qbits))
     for ii in range(par.n_qbits):
@@ -62,7 +62,7 @@ def paper(par: Param, topological: bool=True):
                 J[ii, jj] = 0
                 continue
 
-            cos_ij = R_ij[0] / r_ij
+            cos_ij = R_ij[1] / r_ij
             J[ii, jj] = (3 * cos_ij**2 - 1) / np.pow(r_ij, 3)
     
     return J

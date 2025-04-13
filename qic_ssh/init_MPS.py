@@ -1,7 +1,9 @@
 import numpy as np
+import scipy as sp
 import tenpy
 from tenpy.networks.site import SpinHalfSite
 from tenpy.networks.mps import MPS
+from tenpy.networks.mpo import MPO
 from tenpy.models.model import CouplingMPOModel
 from tenpy.algorithms import dmrg
 from tenpy.linalg.np_conserved import Array
@@ -9,6 +11,7 @@ from tenpy.linalg.np_conserved import Array
 class XYSystem(CouplingMPOModel):
     def __init__(self, model_params, J):
         self.J = J
+        # self.z_param =
 
         self.eigvals = []
         self.eigvecs = []
@@ -72,4 +75,26 @@ class XYSystem(CouplingMPOModel):
         # finally convert the results into numpy arrays
         self.eigvals = np.array(self.eigvals)
         self.eigvecs = np.array(self.eigvecs)
-
+    
+    def z_string(self):
+        exp_z_site = Array.from_ndarray_trivial(
+            sp.linalg.expm(np.pi * 0.5 * np.array([[1.j, 0.],[0., -1.j]])),
+            labels=['wL', 'wR', 'p', 'p*']
+        )
+        z_site = Array.from_ndarray_trivial(
+            np.array([[1., 0.], [0., -1.]]),
+            labels=['wL', 'wR', 'p', 'p*']
+        )
+        operator = MPO(self.lat.mps_sites(),
+            ['Id', z_site, *[exp_z_site] * self.lat.N_sites, z_site, 'Id'])
+        return self.eigvecs[0].expectation_value(operator)
+    
+    def x_string(self):
+        exp_x_site = Array.from_ndarray_trivial(
+            sp.linalg.expm(np.pi * 0.5 * np.array([[0., 1.j], [1.j, 0.]]))
+        )
+        x_site = Array.from_ndarray_trivial(
+            np.array([[0., 1.], [1., 0.]])
+        )
+        operator = ['Id', x_site, *[exp_x_site] * self.lat.N_sites, x_site, 'Id']        
+        return self.eigvecs[0].expectation_value(operator)
