@@ -40,7 +40,7 @@ class XYSystem:
                         sparse.eye(2**(dist - 1))),
                     self.sigma_p),
                 sparse.eye(2**(N_sites - 1 - last_site)))
-        self.H = - 0.5 * (self.H + self.H.T.conj())
+        self.H = 0.5 * (self.H + self.H.T.conj())
 
     def eig(self, k=None, eigvecs=True):
         if k is None:

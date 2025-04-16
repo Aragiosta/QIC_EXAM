@@ -26,13 +26,20 @@ parser.add_argument('--model', action="store", dest='model', default="ideal")
 # Now, parse the command line arguments and store the 
 # values in the `args` variable
 args = parser.parse_args()
+
+if globals().get('topological', None) is not None:
+    args.n_sites = globals().get('n_sites', None)
+    args.topological = globals().get('topological', None)
+    args.model = globals().get('model', None)
+
 if args.topological == 'True':
     args.topological = True
 else:
     args.topological = False
+
 # For when debbuging is on Friday
-args.model = "paper"
-args.topological = True
+args.model = "ideal"
+args.topological = False
 args.n_sites = 8
 
 # List of computational time used by the main blocks of the execution
@@ -50,7 +57,7 @@ elif args.model == "paper":
 else:
     J = np.empty((par.n_qbits, par.n_qbits))
 
-J[np.abs(J) > 1e-10] = 0
+# J[np.abs(J) <= 1e-13] = 0
 paper = ED.XYSystem(J)
 
 # Then compute time difference
@@ -62,7 +69,7 @@ paper.eig(k=par.lin_size)
 # Then compute time difference
 times['Eig'] = timer() - start
 
-# Time the creation of the energy-n.part graph
+# Time the creation of the energy-n. part. graph
 start = timer()
 # energy_list = utils.find_num_fermions(par, paper.eigvecs[:, paper.eigvals == max(paper.eigvals)])
 energy_list = utils.order_eigvals(par, paper.eigvals, paper.eigvecs)
@@ -105,7 +112,7 @@ times['2p_corr'] = timer() - start
 # plt.show()
 
 # Data production
-parameters = '''N_qbits: %s \n Int_matrix: %s''' % (par.n_qbits, J)
+parameters = '''N_qbits: %s \n Int_matrix: \n %s''' % (par.n_qbits, J)
 
 # # Better not - leads to huge files
 # # np.savetxt(
@@ -115,65 +122,68 @@ parameters = '''N_qbits: %s \n Int_matrix: %s''' % (par.n_qbits, J)
 # #     delimiter=", ",
 # #     header=f"Hamiltonian of {par.n_qbits} sites obeying the {args.model} model")
 
-np.savetxt(
-    f"Eigvals{par.n_qbits}_{args.model}_topo{args.topological}.data",
-    paper.eigvals,
-    fmt="%10.8f",
-    delimiter=", ",
-    header=f"parameters: {parameters}")
-
-np.savetxt(
-    f"Eigvecs{par.n_qbits}_{args.model}_topo{args.topological}.data",
-    paper.eigvecs,
-    fmt="%10.8f",
-    delimiter=", ",
-    header=f"parameters: {parameters}. \n Columns are eigstates of the {args.model} model")
-
-np.savetxt(
-    f"GS{par.n_qbits}_{args.model}_topo{args.topological}.data",
-    paper.eigvecs[:, 0],
-    fmt="%10.8f",
-    delimiter=", ",
-    header=f"parameters: {parameters}. \n Columns are eigstates of the {args.model} model")
-
-import json
-
-with open(f"EnergyToNumber{par.n_qbits}_{args.model}_topo{args.topological}.data", 'w') as file:
-    file.write(json.dumps(energy_list, indent='\t')) # use `json.loads` to do the reverse
-
+# start = timer()
 # np.savetxt(
-#     f"EnergyToNumber{par.n_qbits}_{args.model}_topo{args.topological}.data",
-#     energy_list,
+#     f"Eigvals{par.n_qbits}_{args.model}_topo{args.topological}.data",
+#     paper.eigvals,
+#     fmt="%10.8f",
 #     delimiter=", ",
 #     header=f"parameters: {parameters}")
 
-np.savetxt(
-    f"EntEntropy{par.n_qbits}_{args.model}_topo{args.topological}.data",
-    np.array([ent_entropy]),
-    fmt="%10.8f",
-    delimiter=", ",
-    header=f"parameters: {parameters} \n Bipartite entropy on the GS of the {args.model} model")
+# np.savetxt(
+#     f"Eigvecs{par.n_qbits}_{args.model}_topo{args.topological}.data",
+#     paper.eigvecs,
+#     fmt="%10.8f",
+#     delimiter=", ",
+#     header=f"parameters: {parameters}. \n Columns are eigstates of the {args.model} model")
 
-np.savetxt(
-    f"StringParameters{par.n_qbits}_{args.model}_topo{args.topological}.data",
-    [z_parameter, x_parameter],
-    fmt="%10.8f",
-    delimiter=", ",
-    header=f"parameters: {parameters} \n z and x string VEV of the {args.model} model")
+# np.savetxt(
+#     f"GS{par.n_qbits}_{args.model}_topo{args.topological}.data",
+#     paper.eigvecs[:, 0],
+#     fmt="%10.8f",
+#     delimiter=", ",
+#     header=f"parameters: {parameters}. \n Columns are eigstates of the {args.model} model")
 
-np.savetxt(
-    f"ZZCorrelators{par.n_qbits}_{args.model}_topo{args.topological}.data",
-    zz_corr,
-    fmt="%10.8f",
-    delimiter=", ",
-    header=f"zz correlator on the GS of the {args.model} model\n parameters: {parameters}")
+# import json
 
-np.savetxt(
-    f"XXCorrelators{par.n_qbits}_{args.model}_topo{args.topological}.data",
-    xx_corr,
-    fmt="%10.8f",
-    delimiter=", ",
-    header=f"xx correlator on the GS of the {args.model} model\n parameters: {parameters}")
+# with open(f"EnergyToNumber{par.n_qbits}_{args.model}_topo{args.topological}.data", 'w') as file:
+#     file.write(json.dumps(energy_list, indent='\t')) # use `json.loads` to do the reverse
 
-with open(f"Times{par.n_qbits}_{args.model}_topo{args.topological}.data", 'w') as file:
-    file.write(json.dumps(times, indent='\t')) # use `json.loads` to do the reverse
+# # np.savetxt(
+# #     f"EnergyToNumber{par.n_qbits}_{args.model}_topo{args.topological}.data",
+# #     energy_list,
+# #     delimiter=", ",
+# #     header=f"parameters: {parameters}")
+
+# np.savetxt(
+#     f"EntEntropy{par.n_qbits}_{args.model}_topo{args.topological}.data",
+#     np.array([ent_entropy]),
+#     fmt="%10.8f",
+#     delimiter=", ",
+#     header=f"parameters: {parameters} \n Bipartite entropy on the GS of the {args.model} model")
+
+# np.savetxt(
+#     f"StringParameters{par.n_qbits}_{args.model}_topo{args.topological}.data",
+#     [z_parameter, x_parameter],
+#     fmt="%10.8f",
+#     delimiter=", ",
+#     header=f"parameters: {parameters} \n z and x string VEV of the {args.model} model")
+
+# np.savetxt(
+#     f"ZZCorrelators{par.n_qbits}_{args.model}_topo{args.topological}.data",
+#     zz_corr,
+#     fmt="%10.8f",
+#     delimiter=", ",
+#     header=f"zz correlator on the GS of the {args.model} model\n parameters: {parameters}")
+
+# np.savetxt(
+#     f"XXCorrelators{par.n_qbits}_{args.model}_topo{args.topological}.data",
+#     xx_corr,
+#     fmt="%10.8f",
+#     delimiter=", ",
+#     header=f"xx correlator on the GS of the {args.model} model\n parameters: {parameters}")
+
+# with open(f"Times{par.n_qbits}_{args.model}_topo{args.topological}.data", 'w') as file:
+#     file.write(json.dumps(times, indent='\t')) # use `json.loads` to do the reverse
+
+# times['IO_handling'] = timer() - start

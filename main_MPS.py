@@ -1,11 +1,15 @@
+# For external bash handling of the sim parameters
+import argparse
+# For time diagnostics
+from timeit import default_timer as timer
+# All the mathsy stuff
 import numpy as np
 import scipy as sp
 from scipy import sparse
 import matplotlib.pyplot as plt
+# Specific modules for the simulation
 from qic_ssh import init_MPS as MPS
 from qic_ssh import setup
-# For external bash handling of the sim parameters
-import argparse
 
 # Define the parser
 parser = argparse.ArgumentParser(description='QIAC exam')
@@ -27,8 +31,14 @@ else:
     args.topological = False
 # For when debbuging is on Friday
 args.model = "ideal"
-args.topological = True
-args.n_sites = 8
+args.topological = False
+args.n_sites = 6
+
+# List of computational time used by the main blocks of the execution
+times = {}
+
+# Time the setup of the system
+start = timer()
 
 par = setup.Param(args.n_sites)
 # Now try to use it and reproduce the paper
@@ -53,8 +63,8 @@ model_params = {
 # model_params['lattice'] = chain
 
 paper = MPS.XYSystem(model_params=model_params, J=J)
-# paper.init_sites(model_params=model_params)
-# paper.init_terms(model_params=model_params)
+# Then compute time difference
+times['Init'] = timer() - start
 
 # We must first find the starting WF for the DMRG algorithm
 # file_path = r"DATA_SERVER/data_8_topo_ideal/Eigvecs8_ideal_topoTrue.data"
@@ -64,39 +74,46 @@ paper = MPS.XYSystem(model_params=model_params, J=J)
 # else:
 #     p_state = None
 # ALTERNATIVELY: find eigvecs starting from generic random wf
-p_state = np.random.rand(par.lin_size, 1)
+
+# Time the eigensolver of the MB hamiltonian
+start = timer()
+p_state = np.random.rand(par.lin_size, 4)
 alg_params = {
             'trunc_params': {
                 'chi_max': 30,
-                'svd_min': 1.e-7,
+                'svd_min': 1.e-10,
             },
             'max_sweeps': 40,
-            'min_sweeps': 10
+            # 'min_sweeps': 10
 }
 paper.do_DMRG(alg_params, p_state)
+# Then compute time difference
+times['Eig'] = timer() - start
 
-# print(paper.gs_energy, paper.gs_psi)
-
-# energy_list = order_eigvals(par, paper.eigvals, paper.eigvecs)
-# energy_list = utils.find_num_fermions(par, paper.eigvecs[:, paper.eigvals == max(paper.eigvals)])
-
+# Time the entanglement spectrum of the GS
+start = timer()
 # Compute entanglement of GS
-ent_entropy = np.array([
-    paper.eigvecs[ii].entanglement_spectrum()[par.n_qbits // 2] for ii in range(4)
-])
+ent_entropy = paper.eigvecs[0].entanglement_spectrum()[par.n_qbits // 2 - 1]
+# Then compute time difference
+times['Eig'] = timer() - start
 
+# Time the computation of the order parameters
+start = timer()
 # Compute order parameters
 z_parameter = paper.z_string()
 x_parameter = paper.x_string()
+# Then compute time difference
+times['Strings'] = timer() - start
+
+# Time the entanglement spectrum of the GS
+start = timer()
 
 # Compute correlation matrices
-zz_corr = np.array([
-    paper.eigvecs[ii].correlation_function('Sz', 'Sz', hermitian=True) for ii in range(4)
-]).reshape((4, par.n_qbits, par.n_qbits))
+zz_corr = paper.eigvecs[0].correlation_function('Sz', 'Sz', hermitian=True)
 
-xx_corr = np.array([
-    paper.eigvecs[ii].correlation_function('Sx', 'Sx', hermitian=True) for ii in range(4)
-]).reshape((4, par.n_qbits, par.n_qbits))
+xx_corr = paper.eigvecs[0].correlation_function('Sx', 'Sx', hermitian=True)
+# Then compute time difference
+times['2p_corr'] = timer() - start
 
 # e_N = utils.order_eigvals(par, paper.eigvals, paper.eigvecs)
 # plt.eventplot(e_N, orientation='vertical')
@@ -113,6 +130,7 @@ parameters = '''N_qbits: %s \n Int_matrix: \n%s''' % (par.n_qbits, J)
 # # #     delimiter=", ",
 # # #     header=f"Hamiltonian of {par.n_qbits} sites obeying the {args.model} model")
 
+start = timer()
 np.savetxt(
     f"Eigvals{par.n_qbits}_{args.model}_topo{args.topological}.data",
     paper.eigvals,
@@ -120,12 +138,30 @@ np.savetxt(
     delimiter=", ",
     header=f"parameters: {parameters}")
 
+# np.savetxt(
+#     f"Eigvecs{par.n_qbits}_{args.model}_topo{args.topological}.data",
+#     np.array([paper.eigvecs[ii].get_theta() for ii in range(4)]).reshape(par.lin_size, 4),
+#     fmt="%10.8f",
+#     delimiter=", ",
+#     header=f"parameters: {parameters}. \n Columns are eigstates of the {args.model} model")
+
 np.savetxt(
-    f"Eigvecs{par.n_qbits}_{args.model}_topo{args.topological}.data",
-    np.array([paper.eigvecs[ii].get_theta() for ii in range(4)]).reshape(par.lin_size, 4),
+    f"GS{par.n_qbits}_{args.model}_topo{args.topological}.data",
+    paper.eigvecs[0].get_theta(0, par.n_qbits).to_ndarray().reshape(-1),
     fmt="%10.8f",
     delimiter=", ",
     header=f"parameters: {parameters}. \n Columns are eigstates of the {args.model} model")
+
+import json
+
+# with open(f"EnergyToNumber{par.n_qbits}_{args.model}_topo{args.topological}.data", 'w') as file:
+#     file.write(json.dumps(energy_list, indent='\t')) # use `json.loads` to do the reverse
+
+with open(f"SweepStats{par.n_qbits}_{args.model}_topo{args.topological}.data", 'w') as file:
+    file.write(json.dump(paper.dmrg_sweep_stats, indent='\t')) # use `json.loads` to do the reverse
+
+with open(f"UpdateStats{par.n_qbits}_{args.model}_topo{args.topological}.data", 'w') as file:
+    file.write(json.dumps(paper.dmrg_update_stats, indent='\t')) # use `json.loads` to do the reverse
 
 # np.savetxt(
 #     f"EnergyToNumber{par.n_qbits}_{args.model}_topo{args.topological}.data",
@@ -160,3 +196,8 @@ np.savetxt(
     fmt="%10.8f",
     delimiter=", ",
     header=f"xx correlator on the GS of the {args.model} model\n parameters: {parameters}")
+
+times['IO_handling'] = timer() - start
+
+with open(f"Times{par.n_qbits}_{args.model}_topo{args.topological}.data", 'w') as file:
+    file.write(json.dumps(times, indent='\t')) # use `json.loads` to do the reverse

@@ -73,6 +73,8 @@ def ideal(par: Param, topological: bool=True):
     # used in the paper, although we neglect nnn contributions.
     J_hopping = 2.42
     J_prime_hopping = -0.92
+    # J_hopping = 0.1
+    # J_prime_hopping = 10.
 
     if topological:
         # Just switch the hopping amplitudes

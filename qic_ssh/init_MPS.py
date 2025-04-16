@@ -7,6 +7,7 @@ from tenpy.networks.mpo import MPO
 from tenpy.models.model import CouplingMPOModel
 from tenpy.algorithms import dmrg
 from tenpy.linalg.np_conserved import Array
+import matplotlib.pyplot as plt
 
 class XYSystem(CouplingMPOModel):
     def __init__(self, model_params, J):
@@ -15,6 +16,8 @@ class XYSystem(CouplingMPOModel):
 
         self.eigvals = []
         self.eigvecs = []
+        self.dmrg_update_stats = []
+        self.dmrg_sweep_stats = []
 
         CouplingMPOModel.__init__(self, model_params)
 
@@ -58,19 +61,28 @@ class XYSystem(CouplingMPOModel):
         # To extend the first k eigenstates, do DMRG k times
         # and each time add the found eigstate to the orthogonal_to parameters
         ortho_space = []
+        eng = None
         for ii in range(k):
             wavefunction = p_state[:, ii]
             array_from_wf = Array.from_ndarray_trivial(wavefunction.reshape(train_shape), labels=leg_labels)
             psi.append(MPS.from_full(self.lat.mps_sites(), array_from_wf, bc=self.lat.bc_MPS))
             #Then initialize engine
-            eng = dmrg.SingleSiteDMRGEngine(psi[ii], self, alg_params, orthogonal_to=ortho_space)
+            eng = dmrg.TwoSiteDMRGEngine(psi[ii], self, alg_params, orthogonal_to=ortho_space)
             # and run
             results = eng.run()
             
             self.eigvals.append(results[0])
             self.eigvecs.append(results[1])
+
+            self.dmrg_update_stats.append(eng.update_stats)
+            self.dmrg_sweep_stats.append(eng.sweep_stats)
+            
             # then remove the eigenvector that we found
             ortho_space.append(psi[ii])
+            fig, ax = plt.subplots()
+            eng.plot_sweep_stats(ax)
+            eng.plot_update_stats(ax)
+            plt.show()
         
         # finally convert the results into numpy arrays
         self.eigvals = np.array(self.eigvals)
@@ -79,22 +91,25 @@ class XYSystem(CouplingMPOModel):
     def z_string(self):
         exp_z_site = Array.from_ndarray_trivial(
             sp.linalg.expm(np.pi * 0.5 * np.array([[1.j, 0.],[0., -1.j]])),
-            labels=['wL', 'wR', 'p', 'p*']
+            labels=['p', 'p*']
         )
         z_site = Array.from_ndarray_trivial(
             np.array([[1., 0.], [0., -1.]]),
-            labels=['wL', 'wR', 'p', 'p*']
+            labels=['p', 'p*']
         )
-        operator = MPO(self.lat.mps_sites(),
-            ['Id', z_site, *[exp_z_site] * self.lat.N_sites, z_site, 'Id'])
+        # operator = MPO(self.lat.mps_sites(),
+        #     [Id, z_site, *[exp_z_site] * self.lat.N_sites, z_site, Id])
+        operator = ['Id', z_site, *[exp_z_site] * (self.lat.N_sites - 4), z_site, 'Id']
         return self.eigvecs[0].expectation_value(operator)
     
     def x_string(self):
         exp_x_site = Array.from_ndarray_trivial(
-            sp.linalg.expm(np.pi * 0.5 * np.array([[0., 1.j], [1.j, 0.]]))
+            sp.linalg.expm(np.pi * 0.5 * np.array([[0., 1.j], [1.j, 0.]])),
+            labels=['p', 'p*']
         )
         x_site = Array.from_ndarray_trivial(
-            np.array([[0., 1.], [1., 0.]])
+            np.array([[0., 1.], [1., 0.]]),
+            labels=['p', 'p*']
         )
-        operator = ['Id', x_site, *[exp_x_site] * self.lat.N_sites, x_site, 'Id']        
+        operator = ['Id', x_site, *[exp_x_site] * (self.lat.N_sites - 4), x_site, 'Id']      
         return self.eigvecs[0].expectation_value(operator)

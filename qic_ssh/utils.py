@@ -75,7 +75,7 @@ def get_reduced_density_matrix(psi, loc_dim, n_sites, keep_indices, print_rho=Fa
 def bipartite_entropy(par, psi):
     # Entanglement entropy of the state psi from the sublattice A/B bipartition
     # Compute RDM over the odd sites
-    rho_A = get_reduced_density_matrix(psi, 2, par.n_qbits, [ii for ii in range(0, par.n_qbits, 2)])
+    rho_A = get_reduced_density_matrix(psi, 2, par.n_qbits, list(range(0, par.n_qbits, 2)))
     eigvals = np.linalg.eigvalsh(rho_A)
     # Purge the smallest eigenvalues
     eigvals = eigvals[eigvals >= 1e-8]
@@ -85,7 +85,7 @@ def bipartite_entropy(par, psi):
 def half_chain_entropy(par, psi):
     # Entanglement entropy of the state psi from an half-chain division
     # Compute RDM over first half of the chain
-    rho_A = get_reduced_density_matrix(psi, 2, par.n_qbits, [ii for ii in range(par.n_qbits // 2)])
+    rho_A = get_reduced_density_matrix(psi, 2, par.n_qbits, list(range(par.n_qbits // 2)))
     eigvals = np.linalg.eigvalsh(rho_A)
     # Purge the smallest eigenvalues
     eigvals = eigvals[eigvals >= 1e-15]
@@ -182,7 +182,7 @@ def zz_correlation(par, psi, keep_indices):
     # Reshape rho to ensure it is a square matrix corresponding to the subsystem
     RDM = RDM.reshape((subsystem_dim, subsystem_dim))
     # Now compute the desired two-site operator's expectation value
-    return np.trace(RDM @ np.kron(np.array([[1, 0],[0, -1]]), np.array([[1, 0],[0, -1]])))
+    return np.trace(RDM @ np.kron(np.array([[1., 0],[0, -1.]]), np.array([[1., 0],[0, -1.]])))
 
 def xx_correlation(par, psi, keep_indices):
     # To find the 2-point zz correlation expectation value of sites i, i+1
@@ -211,7 +211,7 @@ def xx_correlation(par, psi, keep_indices):
     # Reshape rho to ensure it is a square matrix corresponding to the subsystem
     RDM = RDM.reshape((subsystem_dim, subsystem_dim))
     # Now compute the desired two-site operator's expectation value
-    return np.trace(RDM @ np.kron(np.array([[0, 1],[1, 0]]), np.array([[0, 1],[1, 0]])))
+    return np.trace(RDM @ np.kron(np.array([[0, 1.],[1., 0]]), np.array([[0, 1.],[1., 0]])))
 
 def z_string(par, psi):
     string_op = 1.
