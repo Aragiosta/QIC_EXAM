@@ -34,10 +34,10 @@ class XYSystem(CouplingMPOModel):
             # Save strength entries:
             strength = - np.diagonal(self.J, offset=dx)
             # Create 2-body interaction, already hermitian
-            self.add_coupling(strength, 0, 'Sx',
-                0, 'Sx', dx, plus_hc=False)
-            self.add_coupling(strength, 0, 'Sy',
-                0, 'Sy', dx, plus_hc=False)
+            self.add_coupling(strength, 0, 'Sp',
+                0, 'Sm', dx, plus_hc=True)
+            # self.add_coupling(strength, 0, 'Sm',
+            #     0, 'Sp', dx, plus_hc=False)
 
     def do_DMRG(self, alg_params, p_state=None, k=4):
         if not isinstance(p_state, np.ndarray):
@@ -55,7 +55,7 @@ class XYSystem(CouplingMPOModel):
             k = p_state.shape[1]
 
         leg_labels = [f"p{ii}" for ii in range(self.lat.N_sites)]
-        train_shape = tuple([2 for _ in range(self.lat.N_sites)])
+        train_shape = tuple(2 for _ in range(self.lat.N_sites))
 
         psi = []
         # To extend the first k eigenstates, do DMRG k times
@@ -66,6 +66,8 @@ class XYSystem(CouplingMPOModel):
             wavefunction = p_state[:, ii]
             array_from_wf = Array.from_ndarray_trivial(wavefunction.reshape(train_shape), labels=leg_labels)
             psi.append(MPS.from_full(self.lat.mps_sites(), array_from_wf, bc=self.lat.bc_MPS))
+            # psi.append(MPS.from_product_state(self.lat.mps_sites(), [0]*self.lat.N_sites))
+            
             #Then initialize engine
             eng = dmrg.TwoSiteDMRGEngine(psi[ii], self, alg_params, orthogonal_to=ortho_space)
             # and run
@@ -89,18 +91,25 @@ class XYSystem(CouplingMPOModel):
         self.eigvecs = np.array(self.eigvecs)
     
     def z_string(self):
-        exp_z_site = Array.from_ndarray_trivial(
+        exp_Z = Array.from_ndarray_trivial(
             sp.linalg.expm(np.pi * 0.5 * np.array([[1.j, 0.],[0., -1.j]])),
             labels=['p', 'p*']
         )
-        z_site = Array.from_ndarray_trivial(
+        Z = Array.from_ndarray_trivial(
             np.array([[1., 0.], [0., -1.]]),
             labels=['p', 'p*']
         )
         # operator = MPO(self.lat.mps_sites(),
         #     [Id, z_site, *[exp_z_site] * self.lat.N_sites, z_site, Id])
-        operator = ['Id', z_site, *[exp_z_site] * (self.lat.N_sites - 4), z_site, 'Id']
-        return self.eigvecs[0].expectation_value(operator)
+        Id = self.lat.mps_sites()[0].Id
+        # operator = list(zip(
+        #     [Id, Z, *[exp_Z] * (self.lat.N_sites - 4), Z, Id],
+        #     range(self.lat.N_sites)
+        # ))
+        operator = [Id, Z, *[exp_Z] * (self.lat.N_sites - 4), Z, Id]
+        # op_grid = [operator] * self.lat.N_sites
+        # jw_string = MPO.from_grids(self.lat.mps_sites(), op_grid, IdL=0, IdR=-1)
+        return - self.eigvecs[0].expectation_value_multi_sites(operator, 0)
     
     def x_string(self):
         exp_x_site = Array.from_ndarray_trivial(
@@ -112,4 +121,4 @@ class XYSystem(CouplingMPOModel):
             labels=['p', 'p*']
         )
         operator = ['Id', x_site, *[exp_x_site] * (self.lat.N_sites - 4), x_site, 'Id']      
-        return self.eigvecs[0].expectation_value(operator)
+        return - self.eigvecs[0].expectation_value_multi_sites(operator, 0)

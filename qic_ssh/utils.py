@@ -80,7 +80,7 @@ def bipartite_entropy(par, psi):
     # Purge the smallest eigenvalues
     eigvals = eigvals[eigvals >= 1e-8]
     # Then Entanglement spectrum
-    return  eigvals
+    return - np.log2(eigvals)
 
 def half_chain_entropy(par, psi):
     # Entanglement entropy of the state psi from an half-chain division
@@ -90,7 +90,7 @@ def half_chain_entropy(par, psi):
     # Purge the smallest eigenvalues
     eigvals = eigvals[eigvals >= 1e-15]
     # Then Entanglement spectrum
-    return  eigvals
+    return - np.log2(eigvals)
 
 def entanglement_spectrum(par, eigvecs):
     # Compute the half chain entanglement entropy for all calculated eigenstates

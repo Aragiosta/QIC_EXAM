@@ -10,12 +10,12 @@ Just a dump of things popping up.
 4. correct entanglement spectrum - done
 5. time analysis - done
 - MPS:
-1. run everything and save what needed
+1. run everything and save what needed - done
 2. check against ED
 4. correct entanglement spectrum - done
 5. time analysis - done
-6. How to use DMRG? No boundary conditions? Extend size? Other?
-7. String parameters
+6. How to use DMRG? No boundary conditions? Extend size? Other? - done
+7. String parameters - done
 - JW:
 1. Analytic predictions
 2. fidelity of eigvecs?

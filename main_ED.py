@@ -38,8 +38,8 @@ else:
     args.topological = False
 
 # For when debbuging is on Friday
-args.model = "ideal"
-args.topological = False
+args.model = "paper"
+args.topological = True
 args.n_sites = 8
 
 # List of computational time used by the main blocks of the execution
@@ -65,6 +65,7 @@ times['Init'] = timer() - start
 
 # Time the eigensolver of the MB hamiltonian
 start = timer()
+# paper.eig(k=par.lin_size)
 paper.eig(k=par.lin_size)
 # Then compute time difference
 times['Eig'] = timer() - start

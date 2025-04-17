@@ -30,9 +30,9 @@ if args.topological == 'True':
 else:
     args.topological = False
 # For when debbuging is on Friday
-args.model = "ideal"
-args.topological = False
-args.n_sites = 6
+# args.model = "paper"
+# args.topological = True
+# args.n_sites = 16
 
 # List of computational time used by the main blocks of the execution
 times = {}
@@ -53,7 +53,6 @@ model_params = {
     'bc_MPS': 'finite',
     'L': par.n_qbits,
     'lattice': 'Chain',
-    'bc_x': 'open',
     'order': 'default',
     'conserve': 'None'
 }
@@ -77,7 +76,9 @@ times['Init'] = timer() - start
 
 # Time the eigensolver of the MB hamiltonian
 start = timer()
-p_state = np.random.rand(par.lin_size, 4)
+p_state = np.zeros((par.lin_size, 1))
+p_state[0, :] = 1.
+
 alg_params = {
             'trunc_params': {
                 'chi_max': 30,
@@ -109,9 +110,9 @@ times['Strings'] = timer() - start
 start = timer()
 
 # Compute correlation matrices
-zz_corr = paper.eigvecs[0].correlation_function('Sz', 'Sz', hermitian=True)
+zz_corr = paper.eigvecs[0].correlation_function('Sz', 'Sz', hermitian=True) * 4
 
-xx_corr = paper.eigvecs[0].correlation_function('Sx', 'Sx', hermitian=True)
+xx_corr = paper.eigvecs[0].correlation_function('Sx', 'Sx', hermitian=True) * 4
 # Then compute time difference
 times['2p_corr'] = timer() - start
 
@@ -157,11 +158,11 @@ import json
 # with open(f"EnergyToNumber{par.n_qbits}_{args.model}_topo{args.topological}.data", 'w') as file:
 #     file.write(json.dumps(energy_list, indent='\t')) # use `json.loads` to do the reverse
 
-with open(f"SweepStats{par.n_qbits}_{args.model}_topo{args.topological}.data", 'w') as file:
-    file.write(json.dump(paper.dmrg_sweep_stats, indent='\t')) # use `json.loads` to do the reverse
+# with open(f"SweepStats{par.n_qbits}_{args.model}_topo{args.topological}.data", 'w') as file:
+    # file.write(json.dumps(paper.dmrg_sweep_stats, indent='\t')) # use `json.loads` to do the reverse
 
-with open(f"UpdateStats{par.n_qbits}_{args.model}_topo{args.topological}.data", 'w') as file:
-    file.write(json.dumps(paper.dmrg_update_stats, indent='\t')) # use `json.loads` to do the reverse
+# with open(f"UpdateStats{par.n_qbits}_{args.model}_topo{args.topological}.data", 'w') as file:
+#     file.write(json.dumps(paper.dmrg_update_stats, indent='\t')) # use `json.loads` to do the reverse
 
 # np.savetxt(
 #     f"EnergyToNumber{par.n_qbits}_{args.model}_topo{args.topological}.data",
