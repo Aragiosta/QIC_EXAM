@@ -16,7 +16,7 @@ class XYSystem:
 
         self.H = sparse.coo_array((2**N_sites, 2**N_sites), dtype=complex)
         for (ii, jj), J in np.ndenumerate(int_mat):
-            if J == 0: continue
+            if np.abs(J) <= 1e-10: continue
             if jj == ii: continue
 
             first_site = np.min([ii, jj])

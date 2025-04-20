@@ -15,10 +15,6 @@ from qic_ssh import utils
 # Define the parser
 parser = argparse.ArgumentParser(description='QIAC exam')
 
-# Declare an argument (`--algo`), saying that the 
-# corresponding value should be stored in the `algo` 
-# field, and using a default value if the argument 
-# isn't given
 parser.add_argument('--topological', action="store", dest='topological', default='True')
 parser.add_argument('--n_sites', action="store", dest='n_sites', default=0, type=int)
 parser.add_argument('--model', action="store", dest='model', default="ideal")

@@ -63,11 +63,11 @@ class XYSystem(CouplingMPOModel):
         ortho_space = []
         eng = None
         for ii in range(k):
+            # Import WF as MPS
             wavefunction = p_state[:, ii]
             array_from_wf = Array.from_ndarray_trivial(wavefunction.reshape(train_shape), labels=leg_labels)
             psi.append(MPS.from_full(self.lat.mps_sites(), array_from_wf, bc=self.lat.bc_MPS))
-            # psi.append(MPS.from_product_state(self.lat.mps_sites(), [0]*self.lat.N_sites))
-            
+
             #Then initialize engine
             eng = dmrg.TwoSiteDMRGEngine(psi[ii], self, alg_params, orthogonal_to=ortho_space)
             # and run
@@ -81,10 +81,6 @@ class XYSystem(CouplingMPOModel):
             
             # then remove the eigenvector that we found
             ortho_space.append(psi[ii])
-            fig, ax = plt.subplots()
-            eng.plot_sweep_stats(ax)
-            eng.plot_update_stats(ax)
-            plt.show()
         
         # finally convert the results into numpy arrays
         self.eigvals = np.array(self.eigvals)

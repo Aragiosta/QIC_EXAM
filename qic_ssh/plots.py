@@ -1,6 +1,7 @@
 import json
 import os.path
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 import numpy as np
 from scipy.optimize import curve_fit
 from collections import Counter
@@ -44,6 +45,7 @@ def obc_effect(topological: bool, paper: bool, orig: str):
     else:
         model = 'ideal'
 
+    min_x = None
     if 'ED' in orig:
         min_x = 6
     elif 'MPS' in orig:
@@ -110,6 +112,7 @@ def obc_effect(topological: bool, paper: bool, orig: str):
 def ent_spectr(ed_sizes, mps_sizes):
     # Entanglement spectrum
     db_spectr = []
+
     for orig, size in zip(
         [*['DATA_ED'] * len(ed_sizes), *['DATA_MPS'] * len(mps_sizes)],
         [*ed_sizes, *mps_sizes]
@@ -127,37 +130,60 @@ def ent_spectr(ed_sizes, mps_sizes):
                 delimiter=',')
             
             if orig == 'DATA_MPS':
-                spectrum *= np.log2(np.exp(1.))
+                spectrum = np.pow(np.e, - spectrum)
+            if orig == 'DATA_ED':
+                spectrum = np.pow(2, - spectrum)
             # dump it
-            db_spectr.append(spectrum)
+            db_spectr.append(np.log2(spectrum[spectrum >= 1e-5]))
 
     # now count the entries
-    degeneracies = [Counter(spectrum) for spectrum in db_spectr]
+    degeneracies = []
+    for spectrum in db_spectr:
+        counter = []
+        for ii, element in enumerate(spectrum):
+            if ii == len(spectrum) - 1:
+                continue
+            if ii == 0:
+                counter = [np.array([element, 1])]
+
+            if np.abs(element - spectrum[ii + 1]) <= 1e-7:
+                counter[-1] += np.array([0, 1])
+            else:
+                counter.append(np.array([spectrum[ii + 1], 1]))
+
+        degeneracies.append(counter)
 
     fig, ax = plt.subplots()
+    fig.set_size_inches([10, 4])
 
     ax.eventplot(
         db_spectr,
         orientation='vertical',
-        linelengths=0.8,
+        linelengths=0.5,
         colors=['blue', 'red'] * len([*ed_sizes, * mps_sizes])
     )
 
     # Annotate degeneracies
     for jj, degeneracy in enumerate(degeneracies):
-        for y_val, count in degeneracy.items():
+        for y_val, count in degeneracy:
             if count > 1:  # Only annotate if degenerate (optional)
-                ax.text(jj, y_val, f'{count}',
+                ax.text(jj+0.4, y_val, f'{count:.0f}',
                         va='center', ha='center', fontsize=9, color='black')
 
     ax.set_title('Entanglement spectrum for different chain sizes')
     ax.set_xlabel('Number of sites')
     ax.set_ylabel('Ent. entropy')
-    ax.set_yticks([])
+    # ax.set_yticks([])
     ax.set_xticks(
-        list(range(len(db_spectr))),
-        [*np.repeat(ed_sizes, 2), *np.repeat(mps_sizes, 2)]
+        list(np.arange(0.5, len(db_spectr), 2)),
+        [*ed_sizes, *mps_sizes]
     )
+
+    red_patch = mpatches.Patch(color='red', label='Trivial')
+    blue_patch = mpatches.Patch(color='blue', label='Topological')
+    plt.axvline(x=9.5, linestyle='--', color='gray')
+    plt.legend(handles=[blue_patch, red_patch])
+
     plt.show()
     print('gg')
 

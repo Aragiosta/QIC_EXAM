@@ -12,7 +12,7 @@ import numpy as np
 N_ITER = 100
 MODEL = 'paper'
 TOPOLOGY = 'True'
-N_SITES = 8
+N_SITES = 10
 
 globals()['topological'] = TOPOLOGY
 globals()['n_sites'] = N_SITES
